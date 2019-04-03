@@ -14,6 +14,10 @@ check_for_update() {
 	temp_download_dir="/home/deploy/temp/"
 	install_dir="/usr/bin/"
 
+	# create dir if not exist
+	if [[ ! -e $temp_download_dir$now ]]; then
+		mkdir $temp_download_dir$now
+
 	download_file_name=$temp_download_dir$now"/coredeploy"
 
 	# download the new file from github
