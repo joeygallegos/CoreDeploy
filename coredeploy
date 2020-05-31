@@ -8,15 +8,15 @@ echo "Production: $production_dir"
 echo "Backup: $backup_dir"
 echo "Application config: $app_config"
 
-check_for_update() {
+check_for_script_update() {
 
 	now="$(date +'%m_%d_%Y_%H_%M')"
 	temp_download_dir="/home/deploy/temp/"
 	install_dir="/usr/bin/"
 
 	# create dir if not exist
-	if [[ ! -e $temp_download_dir$now ]]; then
-		mkdir $temp_download_dir$now
+	if [[ ! -e "$temp_download_dir$now" ]]; then
+		mkdir "$temp_download_dir$now"
 
 	download_file_name=$temp_download_dir$now"/coredeploy"
 
@@ -27,14 +27,24 @@ check_for_update() {
 	cp -f $download_file_name $install_dir"/coredeploy"
 }
 
-check_for_update
+check_for_script_update
+
+
+# remove code files, do not delete images
+remove_production_asset_files() {
+	echo "Removing production asset files: [js, scss]"
+	rm -rf /var/www/production/public/assets/scripts/*.js
+	rm -rf /var/www/production/public/assets/scss/*.scss
+}
 
 if [[ $# -eq 0 ]]; then
 	# grant permissions to staging dir
+	echo "Provided 0777 access to staging directory"
 	chmod -R 777 $staging_dir*
 else
 
 	if [[ $1 = "build" ]]; then
+		echo "Executing the cache script manually"
 		/usr/bin/php /var/www/staging/app/tasks/deploy/cache.php
 		/usr/bin/php /var/www/production/app/tasks/deploy/cache.php
 	fi
@@ -43,27 +53,25 @@ else
 	if [ $1 = "production" ] || [ $1 = "prod" ]; then
 
 		# copy backup code into dir
-		echo "Copying last code release to directory.."
+		echo "Copying last code release to directory"
 		now="$(date +'%m_%d_%Y_%H_%M')"
 
 		# create backup dir with today's date and copy all files from prod dir to backup dir
-		echo "Creating the backup directory for the production dir.."
+		echo "Creating the backup directory for the production dir"
 		mkdir $backup_dir$now/
 
-		echo "Copy production files to the backup dir.."
+		echo "Copy production files to the backup dir"
 		cp -R $production_dir* $backup_dir$now/
 
 		# cleanout production app dir
-		echo "Deleting production app dir files.."
+		echo "Deleting production app dir files"
 		rm -rf /var/www/production/app/*
 
-		# remove code files, do not delete images
-		rm -rf /var/www/production/public/assets/scripts/*.js
-		rm -rf /var/www/production/public/assets/scss/*.scss
+		remove_production_asset_files
 
 		# deploy staging code to production dir
 		# avoid copying logs from staging to production
-		echo "Copying staging files to production.."
+		echo "Copying staging files to production"
 		cp -R $staging_dir"app/*" $production_dir"app"
 		cp -R $staging_dir"public/*" $production_dir"public"
 
@@ -74,16 +82,16 @@ else
 		cp -R $backup_dir$now"/app/env/"$app_config $production_dir"app/env/"$app_config
 
 		# update composer data
-		echo "Running composer install.."
+		echo "Running composer install/update with optimized autoload"
 
 		# update composer dependencies
 		composer install && composer update
-		composer dump-autoload -o # efficient
+		composer dump-autoload -o # optimize the autoloader for production use 
 
 		# grant permissions in prod dir
-		echo "Granting permissions to production directory.."
+		echo "Granting permissions to production directory"
 		chmod -R 777 $production_dir*
 	else
-		echo "Invalid argument provided.."
+		echo "Invalid argument provided"
 	fi
 fi
