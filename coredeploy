@@ -26,10 +26,7 @@ pull_changes_from_github() {
 	cp -f $download_file_name $install_dir"/coredeploy"
 }
 
-pull_changes_from_github
-
-
-# remove code files, do not delete images
+# clean old js and scss/css files, do not delete images
 remove_production_asset_files() {
 	echo "Removing production asset files: [js, scss]"
 	rm -rf /var/www/production/public/assets/scripts/*.js
@@ -41,7 +38,18 @@ if [[ $# -eq 0 ]]; then
 	echo "Provided 0777 access to staging directory"
 	chmod -R 777 $staging_dir*
 else
+	
+	# clean 
+	if [[ $1 = "clean" ]]; then
+		remove_production_asset_files
+	fi
 
+	# self-upgrade 
+	if [[ $1 = "self-upgrade" ]]; then
+		pull_changes_from_github
+	fi
+
+	# build 
 	if [[ $1 = "build" ]]; then
 		echo "Executing the cache script manually"
 		/usr/bin/php /var/www/staging/app/tasks/deploy/cache.php
